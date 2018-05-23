@@ -1,0 +1,23 @@
+{
+  "name": "almagest",
+  "version": "0.0.1",
+  "description": "Language learning tool through podcasts",
+  "main": "server.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seattleacademy/almagest.git"
+  },
+  "keywords": [
+    "language",
+    "learning"
+  ],
+  "author": "Gary Anderson",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/seattleacademy/almagest/issues"
+  },
+  "homepage": "https://github.com/seattleacademy/almagest#readme"
+}
