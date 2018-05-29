@@ -1,19 +1,136 @@
 <!DOCTYPE html>
-<html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Almagest</title>
+    <title>sp001test</title>
+    <!--   <style type="text/css">
+    html,
+    body {
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: #000;
+        color: #f0f;
+    }
+
+    #lyrics {
+        margin-left: 3em;
+        font: 700 2.3em arial, sans-serif;
+        color: #0ff;
+        text-align: center;
+    }
+    </style> -->
+    <style>
+    .container {
+        width: 80%;
+    }
+    </style>
+<!-- https://datatables.net/download/ -->
+ <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.css"/>
+ 
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.js"></script>
+
+    
 </head>
 
 <body>
-    <aside>The short sample text is for development.</aside>
-    <audio controls id="myAudio">
-        <source src="audio/sp001test.mp4" type="audio/mpeg"> Your browser does not support the audio element.
+    <audio id="audio" preload="auto" controls>
+        <source src="audio/sp001test.mp4" type="audio/mpeg">
+        <track id="trk" onload="showTracks()" kind="subtitles" srclang="en" src="vtt/sp0011test.vtt" default />
     </audio>
-    <div>
-        Hoy os hablamos sobre el lince ibérico, una de las cuatro especies de lince que sobreviven en estado salvaje. Posiblemente han existido muchas más especies de lince, pero actualmente las que quedan son el lince euroasiático, el lince rojo, el lince canadiense y el lince ibérico (ésta especie es de la que os vamos a hablar). Algunos linces viven en amplios territorios de bosques y montañas donde pueden encontrar suficiente alimento.
+    <span id="currentTime">0</span>
+    <br/>
+    <div id="lyrics"></div>
+    <div class="container">
+        <table id="table_id" class="display compact" style="width:100%">
+            <thead>
+                <tr>
+                    <th>index</th>
+                    <th>passage</th>
+                    <th>starttime</th>
+                    <th>endtime</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
     </div>
+    <script type="text/javascript">
+    var lyrics = document.getElementById('lyrics');
+    var audio = document.getElementById('audio');
+    var track = document.getElementById('trk');
+    var textTrack = track.track;
+    track.addEventListener("cuechange", cueChange, false);
+
+    function cueChange() {
+        var cues = textTrack.activeCues;
+
+        // if (cues.length > 0) {
+        //     lyrics.innerHTML = cues[0].text.replace(/\n/g, '<br>');
+        // }
+    }
+
+    function dokeydown(e) {
+        if (e.key == "j") {
+            var cues = textTrack.cues;
+            start = 0;
+            for (let i = 0; i < cues.length; i++) {
+                if (cues[i].startTime < audio.currentTime) {
+                    start = cues[i].startTime;
+                } else {
+                    audio.currentTime = start;
+                    break;
+                }
+            }
+        }
+        if (e.key == "l") audio.currentTime += 5;
+        if (e.key == "k") audio.pause();
+        if (e.key == "5") audio.playbackRate = 1;
+        if (e.key == "4") audio.playbackRate = .75;
+        if (e.key == "3") audio.playbackRate = .5;
+        if (e.key == "6") audio.playbackRate = 1.5;
+        if (e.key == "7") audio.playbackRate = 2;
+
+        e.stopPropagation();
+    }
+    var t = null;
+
+    function showTracks() {
+        var cues = textTrack.cues;
+        console.log(textTrack.cues, cues.length);
+        start = 0;
+        for (let i = 0; i < cues.length; i++) {
+            start = cues[i].startTime;
+            end = cues[i].endTime;
+            text = cues[i].text;
+            // console.log(i, start, end, text);
+            t.row.add([
+                i,
+                text,
+                start,
+                end
+            ]).draw(false);
+        }
+    }
+    function showCurrentTime(e){
+    	$('#currentTime').text(audio.currentTime);
+    }
+    setInterval(()=>{showCurrentTime();},10);
+    document.addEventListener("keydown", dokeydown);
+    $(document).ready(function() {
+        t = $('#table_id').DataTable({
+            "paging": false
+        });
+
+       $('#table_id tbody').on('click', 'tr', function () {
+        var data = t.row( this ).data();
+       // alert( 'You clicked on '+data[2]+'\'s row' );
+        audio.currentTime = data[2];
+        audio.play();
+    } );
+
+    });
+    </script>
 </body>
 
 </html>
