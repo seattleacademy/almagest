@@ -24,23 +24,28 @@
     .container {
         width: 80%;
     }
+    #waveform{
+    	width:30%;
+    	display: inline-block;
+    }
     </style>
-<!-- https://datatables.net/download/ -->
- <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.css"/>
- 
-<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.js"></script>
-
-    
+    <!-- https://datatables.net/download/ -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.css" />
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/wavesurfer.js/2.0.5/wavesurfer.js"></script>
 </head>
 
 <body>
-    <audio id="audio" preload="auto" controls>
+	<div>
+	<div id="waveform"></div>
+
+    <audio id="audio" preload="auto" onload="showWaveForm()">
         <source src="audio/sp001test.mp4" type="audio/mpeg">
-        <track id="trk" onload="showTracks()" kind="subtitles" srclang="en" src="vtt/sp0011test.vtt" default />
+        <track id="trk" onload="showTracks()" kind="subtitles" srclang="es" src="vtt/sp0011test.vtt" default />
     </audio>
-    <span id="currentTime">0</span>
-    <br/>
-    <div id="lyrics"></div>
+    <span id="currentTime">0</span>    
+         <div><input id="slider" type="range" min="1" max="200" value="1" style="width: 100%/></div>
+    </div>
     <div class="container">
         <table id="table_id" class="display compact" style="width:100%">
             <thead>
@@ -57,39 +62,56 @@
     </div>
     <script type="text/javascript">
     var lyrics = document.getElementById('lyrics');
-    var audio = document.getElementById('audio');
+    //var audio = document.getElementById('audio');
     var track = document.getElementById('trk');
     var textTrack = track.track;
     track.addEventListener("cuechange", cueChange, false);
 
     function cueChange() {
         var cues = textTrack.activeCues;
-
-        // if (cues.length > 0) {
-        //     lyrics.innerHTML = cues[0].text.replace(/\n/g, '<br>');
-        // }
     }
+
+    function showWaveForm() {
+         wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: 'violet',
+            progressColor: 'purple',
+            backend: 'MediaElement'
+        });
+        wavesurfer.load('audio/sp001test.mp4');
+
+        var slider = document.querySelector('#slider');
+
+        slider.oninput = function () {
+          var zoomLevel = Number(slider.value);
+          wavesurfer.zoom(zoomLevel);
+        };
+    }
+    showWaveForm()
 
     function dokeydown(e) {
         if (e.key == "j") {
             var cues = textTrack.cues;
             start = 0;
             for (let i = 0; i < cues.length; i++) {
-                if (cues[i].startTime < audio.currentTime) {
+                if (cues[i].startTime < wavesurfer.getCurrentTime()) {
                     start = cues[i].startTime;
+                    end = cues[i].endTime;
+
                 } else {
-                    audio.currentTime = start;
+                    wavesurfer.play(start,end);
                     break;
                 }
             }
         }
-        if (e.key == "l") audio.currentTime += 5;
-        if (e.key == "k") audio.pause();
-        if (e.key == "5") audio.playbackRate = 1;
-        if (e.key == "4") audio.playbackRate = .75;
-        if (e.key == "3") audio.playbackRate = .5;
-        if (e.key == "6") audio.playbackRate = 1.5;
-        if (e.key == "7") audio.playbackRate = 2;
+        if (e.key == "l") wavesurfer.setCurrentTime(wavesurfer.getCurrentTime()+5);
+       // if (e.key == "j") wavesurfer.setCurrentTime(wavesurfer.getCurrentTime()-5);
+        if (e.key == "k") wavesurfer.playPause();
+        if (e.key == "5") wavesurfer.setPlaybackRate(1);
+        if (e.key == "4") wavesurfer.setPlaybackRate(.75);
+        if (e.key == "3") wavesurfer.setPlaybackRate(.5);
+        if (e.key == "6") wavesurfer.setPlaybackRate(1.5);
+        if (e.key == "7") wavesurfer.setPlaybackRate(2);
 
         e.stopPropagation();
     }
@@ -97,7 +119,6 @@
 
     function showTracks() {
         var cues = textTrack.cues;
-        console.log(textTrack.cues, cues.length);
         start = 0;
         for (let i = 0; i < cues.length; i++) {
             start = cues[i].startTime;
@@ -111,25 +132,32 @@
                 end
             ]).draw(false);
         }
+        t.columns.adjust();;
+ 
     }
-    function showCurrentTime(e){
-    	$('#currentTime').text(audio.currentTime);
-    }
-    setInterval(()=>{showCurrentTime();},10);
+
+     wavesurfer.on('ready', function () {
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(3));
+    });
+    wavesurfer.on('audioprocess', function () {
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(3));
+    });
+
     document.addEventListener("keydown", dokeydown);
     $(document).ready(function() {
         t = $('#table_id').DataTable({
             "paging": false
         });
 
-       $('#table_id tbody').on('click', 'tr', function () {
-        var data = t.row( this ).data();
-       // alert( 'You clicked on '+data[2]+'\'s row' );
-        audio.currentTime = data[2];
-        audio.play();
-    } );
+
+        $('#table_id tbody').on('click', 'tr', function(e) {
+            var data = t.row(this).data();
+            e.shiftKey ? wavesurfer.play(data[2]): wavesurfer.play(data[2],data[3]);
+        });
 
     });
+
+
     </script>
 </body>
 
