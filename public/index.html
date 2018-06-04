@@ -7,10 +7,18 @@
         width: 80%;
     }
 
+    .wavesurfer-handle {
+        background: green !important;
+        ;
+        width: 3% !important;
+        ; //height:10px !important;;
+    }
+
     #waveform {
         width: 80%;
         display: inline-block;
     }
+
     </style>
     <!-- https://datatables.net/download/ -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.2.1/dt-1.10.16/b-1.5.1/b-html5-1.5.1/fh-3.1.3/kt-2.3.2/sc-1.4.4/sl-1.2.5/datatables.min.css" />
@@ -24,14 +32,22 @@
 <body>
     <div>
         <div id="waveform"></div>
-        <audio id="audio" preload="auto" onload="showWaveForm()">
+        <audio id="audio" preload="auto"">
             <source src="audio/sp001test.mp4" type="audio/mpeg">
             <track id="trk" onload="showTracks()" kind="subtitles" srclang="es" src="vtt/sp0011test.vtt" default />
         </audio>
         <span id="currentTime">0</span>/<span id="currentDuration">0</span>
         <div>Zoom:
             <input id="zoom" type="range" min="1" max="200" value="1" /> Rate:
-            <input id="rate" type="range" min=".25" max="4" value="1" />
+            <input id="rate" type="range" min=".1" max="4" step="0.1" value="1" list="tickmarks" />
+            <datalist id="tickmarks">
+                <option value=".1" label="10%"\>
+                <option value=".5"\>
+                <option value=".75"\>
+                <option value="1" label="100%"\>
+                <option value="2" label="200%"\>
+                <option value="4" label="400%"\>
+            </datalist>
         </div>
     </div>
     <div class="container">
@@ -87,39 +103,40 @@
     }
     showWaveForm()
 
-    var t = null;
+    var table = null;
 
     function showTracks() {
         var cues = textTrack.cues;
         start = 0;
         for (let i = 0; i < cues.length; i++) {
-            start = cues[i].startTime;
-            end = cues[i].endTime;
+            start = cues[i].startTime.toFixed(1);
+            end = cues[i].endTime.toFixed(1);
             text = cues[i].text;
-            t.row.add([
+            table.row.add([
                 i,
                 text,
                 start,
                 end
             ]).draw(false);
         }
-        t.columns.adjust();;
+        table.columns.adjust();;
 
     }
 
     wavesurfer.on('region-update-end', function(r) {
-        //let track = findTrack(r.start);
-
         var cues = textTrack.cues;
         cues[r.id].startTime = r.start;
         cues[r.id].endTime = r.end;
-        console.log(cues[r.id], r);
+        let data = table.row(r.id).data();
+        data[2] = r.start.toFixed(1);
+        data[3] = r.end.toFixed(1);
+        console.log('data', data);
+        table.row(r.id).data(data).draw();
 
 
     });
     wavesurfer.on('seek', function(p) {
-        console.log('p', p);
-        let t = p * wavesurfer.getDuration();
+        let dt = p * wavesurfer.getDuration();
         let currentTrackNum = findTrack(wavesurfer.getCurrentTime());
         if (currentTrackNum) {
             var cues = textTrack.cues;
@@ -128,32 +145,38 @@
             let end = cues[currentTrackNum].endTime;
 
             wavesurfer.play(start, end);
+
             //e.shiftKey ? wavesurfer.play(data[2]): wavesurfer.play(data[2],data[3]);
         } else {
-            wavesurfer.play(t);
+            wavesurfer.play(dt);
         }
     });
     wavesurfer.on('ready', function() {
-        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(3));
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(1));
     });
 
-    function findTrack(t) {
+    function findTrack(dt) {
         //Given a current time, returns the track number, or null if none.
         var cues = textTrack.cues;
         start = 0;
         for (let i = 0; i < cues.length; i++) {
-            if (t >= cues[i].startTime && t <= cues[i].endTime) return i;
+            if (dt >= cues[i].startTime && dt < cues[i].endTime) return i;
         }
         return null;
     }
 
     wavesurfer.on('audioprocess', function() {
 
-        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(3));
-        $('#currentDuration').text(wavesurfer.getDuration().toFixed(3));
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(1));
+        $('#currentDuration').text(wavesurfer.getDuration().toFixed(1));
         wavesurfer.clearRegions();
+        table.rows().deselect();
+
         let currentTrackNum = findTrack(wavesurfer.getCurrentTime());
-        if (currentTrackNum) {
+
+        if (currentTrackNum !==null) {
+            table.row( currentTrackNum).select();
+            table.row( currentTrackNum).scrollTo();
             var cues = textTrack.cues;
             wavesurfer.addRegion({
                 start: cues[currentTrackNum].startTime,
@@ -164,18 +187,17 @@
                 resize: true
             });
         }
-    });
 
+    });
+    var table = null;
     $(document).ready(function() {
-        t = $('#table_id').DataTable({
+        table = $('#table_id').DataTable({
             "paging": false
         });
 
 
-        $('#table_id tbody').on('click', 'tr', function(e) {
-
-
-            var data = t.row(this).data();
+        $('#table_id tbody').on('dblclick', 'tr', function(e) {
+            var data = table.row(this).data();
             e.shiftKey ? wavesurfer.play(data[2]) : wavesurfer.play(data[2], data[3]);
         });
 
