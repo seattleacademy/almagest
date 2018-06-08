@@ -9,7 +9,6 @@
 
     .wavesurfer-handle {
         background: green !important;
-        ;
         width: 3% !important;
         ; //height:10px !important;;
     }
@@ -37,7 +36,9 @@
             <track id="trk" onload="showTracks()" kind="subtitles" srclang="es" src="vtt/sp0011test.vtt" default />
         </audio>
         <span id="currentTime">0</span>/<span id="currentDuration">0</span>
-        <div>Zoom:
+        <div>
+            <button id="trim">trim</button>
+            Zoom:
             <input id="zoom" type="range" min="1" max="200" value="1" /> Rate:
             <input id="rate" type="range" min=".1" max="4" step="0.1" value="1" list="tickmarks" />
             <datalist id="tickmarks">
@@ -128,32 +129,32 @@
         cues[r.id].startTime = r.start;
         cues[r.id].endTime = r.end;
         let data = table.row(r.id).data();
-        data[2] = r.start.toFixed(1);
-        data[3] = r.end.toFixed(1);
+        data[2] = r.start.toFixed(2);
+        data[3] = r.end.toFixed(2);
         console.log('data', data);
         table.row(r.id).data(data).draw();
-
-
     });
+
     wavesurfer.on('seek', function(p) {
         let dt = p * wavesurfer.getDuration();
         let currentTrackNum = findTrack(wavesurfer.getCurrentTime());
         if (currentTrackNum) {
             var cues = textTrack.cues;
-
             let start = cues[currentTrackNum].startTime;
             let end = cues[currentTrackNum].endTime;
-
             wavesurfer.play(start, end);
-
-            //e.shiftKey ? wavesurfer.play(data[2]): wavesurfer.play(data[2],data[3]);
         } else {
             wavesurfer.play(dt);
         }
     });
     wavesurfer.on('ready', function() {
-        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(1));
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(2));
     });
+
+    function trimRegion(theTrack){
+        //given a track object, trims the start and end times
+        //to all be above a given threshold.
+    }
 
     function findTrack(dt) {
         //Given a current time, returns the track number, or null if none.
@@ -167,8 +168,8 @@
 
     wavesurfer.on('audioprocess', function() {
 
-        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(1));
-        $('#currentDuration').text(wavesurfer.getDuration().toFixed(1));
+        $('#currentTime').text(wavesurfer.getCurrentTime().toFixed(2));
+        $('#currentDuration').text(wavesurfer.getDuration().toFixed(2));
         wavesurfer.clearRegions();
         table.rows().deselect();
 
@@ -195,7 +196,27 @@
             "paging": false
         });
 
-
+        $('#trim').on('click',function(e){
+            //length,accuracy,noWindow,start
+            length=1024;
+            let start=8.6/wavesurfer.getDuration()*2*1024;
+            start = start.toFixed(0)
+            console.log(start,'start')
+            pcmData = wavesurfer.exportPCM(length,1000,true,0);
+            pcmData = JSON.parse(pcmData);
+            console.log(typeof pcmData);
+            for(let i=start;i<pcmData.length;i++){
+                console.log(pcmData[i])
+                if(Math.abs(pcmData[i])>.1){
+                    let playAt = i/length*wavesurfer.getDuration()/2;
+                    console.log(playAt);
+                    wavesurfer.play(playAt);
+                console.log(pcmData.length,i,pcmData[i],(i/1024/2)*wavesurfer.getDuration());
+                break;
+            }
+            }
+            console.log(pcmData);
+        });
         $('#table_id tbody').on('dblclick', 'tr', function(e) {
             var data = table.row(this).data();
             e.shiftKey ? wavesurfer.play(data[2]) : wavesurfer.play(data[2], data[3]);
